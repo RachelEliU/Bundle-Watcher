@@ -27,6 +27,7 @@ variables:
   CURRENT_SIZES_FILE: css-sizes-current.json
   METRICS_REPORT: gl-metrics-report.json
   MARKDOWN_REPORT: css-size-report.md
+  HTML_REPORT: css-size-report.html
 
   # Re-use node_modules across jobs in this pipeline
   npm_config_cache: "$CI_PROJECT_DIR/.npm"
@@ -163,6 +164,7 @@ measure:css-diff:
     paths:
       - $METRICS_REPORT
       - $MARKDOWN_REPORT
+      - $HTML_REPORT
     expose_as: "CSS Size Reports"
     expire_in: 30 days
     # Even if the job fails (threshold exceeded), keep the artifacts

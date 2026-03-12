@@ -9,4 +9,5 @@ module.exports = {
   StdoutTableWriter:             require('./StdoutTableWriter'),
   MarkdownReportWriter:          require('./MarkdownReportWriter'),
   GitLabMetricsReportWriter:     require('./GitLabMetricsReportWriter'),
+  HtmlReportWriter:              require('./HtmlReportWriter'),
 };
