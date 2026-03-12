@@ -25,6 +25,7 @@ const config = {
     sizesFile:      process.env.SIZES_FILE       || 'css-sizes.json',
     metricsReport:  process.env.METRICS_REPORT   || 'gl-metrics-report.json',
     markdownReport: process.env.MARKDOWN_REPORT  || 'css-size-report.md',
+    htmlReport:     process.env.HTML_REPORT      || 'css-size-report.html',
   },
 
   gitlab: {

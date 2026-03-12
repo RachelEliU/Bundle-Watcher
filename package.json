@@ -8,7 +8,13 @@
   },
   "scripts": {
     "scan": "node bin/measure-css.js --scan",
-    "compare": "node bin/measure-css.js --compare"
+    "compare": "node bin/measure-css.js --compare",
+    "build": "node scripts/build-packages.js",
+    "build:bloat": "node scripts/build-packages.js --bloat",
+    "scan:base": "SIZES_FILE=css-sizes-base.json node bin/measure-css.js --scan",
+    "scan:current": "SIZES_FILE=css-sizes-current.json node bin/measure-css.js --scan",
+    "compare:local": "BASE_SIZES_FILE=css-sizes-base.json CURRENT_SIZES_FILE=css-sizes-current.json node bin/measure-css.js --compare",
+    "demo": "node demo-local.js"
   },
   "engines": {
     "node": ">=14"
