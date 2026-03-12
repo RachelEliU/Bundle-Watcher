@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Generated report artifacts (produced at runtime, never commit)
+css-sizes.json
+css-sizes-base.json
+css-sizes-current.json
+css-size-report.md
+css-size-report.html
+gl-metrics-report.json
+
+# Demo package build output
+packages/*/dist/
+
+# npm cache
+.npm/
+
+# OS
+.DS_Store
+Thumbs.db
