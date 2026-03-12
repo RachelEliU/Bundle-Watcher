@@ -17,6 +17,7 @@ const { postMRComment }    = require('../infrastructure/GitLabApiClient');
 const StdoutTableWriter            = require('../reporters/StdoutTableWriter');
 const MarkdownReportWriter         = require('../reporters/MarkdownReportWriter');
 const GitLabMetricsReportWriter    = require('../reporters/GitLabMetricsReportWriter');
+const HtmlReportWriter             = require('../reporters/HtmlReportWriter');
 
 class CssBundlePipeline {
   /**
@@ -60,6 +61,8 @@ class CssBundlePipeline {
 
     const markdown = new MarkdownReportWriter(config.output.markdownReport)
       .write(comparisons, ctx);
+
+    new HtmlReportWriter(config.output.htmlReport).write(comparisons, ctx);
 
     if (ctx.isMR) {
       console.log('\n💬 Posting MR comment...');
