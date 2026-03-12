@@ -1,24 +1,22 @@
 'use strict';
 
 /**
- * CSS bundle scanner.
- * Walks each configured bundle's glob pattern, sums raw and gzip sizes,
- * logs progress, and returns a sizes map keyed by bundle name.
+ * Scans all configured CSS bundles, sums raw and gzip sizes, and logs progress.
+ * Wires together FileFinder, SizeCalculator, and config.
  */
 
 const path = require('path');
-const config = require('./config');
-const { findFiles, getFileSize, getGzippedSize } = require('./files');
-const { formatBytesAbs } = require('./format');
+const config = require('../config');
+const { findFiles } = require('./FileFinder');
+const { getFileSize, getGzippedSize } = require('./SizeCalculator');
+const { formatBytesAbs } = require('./Formatter');
 
 /**
  * Measure all configured CSS bundles in the current working directory.
  *
  * @returns {Object.<string, {raw: number, gzip: number, files: Array}>}
- *   Keyed by bundle name. Each value has:
- *     - raw:   total uncompressed bytes
- *     - gzip:  total gzip-compressed bytes
- *     - files: array of { path, raw, gzip } per matched file
+ *   Keyed by bundle name. Serialized directly to the snapshot JSON, so the
+ *   shape must remain { raw, gzip, files } — NOT { name, raw, gzip, files }.
  */
 function measureBundles() {
   const results = {};

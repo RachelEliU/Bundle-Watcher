@@ -7,6 +7,8 @@
 /**
  * Format a byte delta with a leading sign (e.g. "+12.50 KB", "-3 B").
  * Used for diff columns.
+ * @param {number} bytes
+ * @returns {string}
  */
 function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
@@ -20,6 +22,8 @@ function formatBytes(bytes) {
 /**
  * Format an absolute byte count without a sign (e.g. "12.50 KB").
  * Used for size columns.
+ * @param {number} bytes
+ * @returns {string}
  */
 function formatBytesAbs(bytes) {
   if (bytes === 0) return '0 B';

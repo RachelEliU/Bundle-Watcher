@@ -1,0 +1,17 @@
+{
+  "name": "css-bundle-tracker",
+  "version": "1.0.0",
+  "description": "CSS bundle size tracker CLI for GitLab CI",
+  "main": "src/cli/index.js",
+  "bin": {
+    "measure-css": "./bin/measure-css.js"
+  },
+  "scripts": {
+    "scan": "node bin/measure-css.js --scan",
+    "compare": "node bin/measure-css.js --compare"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT"
+}

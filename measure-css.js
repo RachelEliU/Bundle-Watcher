@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 'use strict';
 
-// Entry point — all logic lives in src/
-require('./src/cli');
+// Backward-compat entry point. Canonical entry is bin/measure-css.js
+require('./src/cli/index');

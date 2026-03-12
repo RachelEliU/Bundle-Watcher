@@ -5,7 +5,7 @@
  * Bundles list is the only thing most projects need to change.
  */
 const config = {
-  // CSS bundles to track (relative glob patterns from project root)
+  // CSS bundles to track (glob patterns relative to project root)
   bundles: [
     { name: 'ui-core',   pattern: 'packages/ui-core/dist/**/*.css' },
     { name: 'ui-forms',  pattern: 'packages/ui-forms/dist/**/*.css' },
@@ -22,9 +22,9 @@ const config = {
   },
 
   output: {
-    sizesFile:     process.env.SIZES_FILE      || 'css-sizes.json',
-    metricsReport: process.env.METRICS_REPORT  || 'gl-metrics-report.json',
-    markdownReport: process.env.MARKDOWN_REPORT || 'css-size-report.md',
+    sizesFile:      process.env.SIZES_FILE       || 'css-sizes.json',
+    metricsReport:  process.env.METRICS_REPORT   || 'gl-metrics-report.json',
+    markdownReport: process.env.MARKDOWN_REPORT  || 'css-size-report.md',
   },
 
   gitlab: {

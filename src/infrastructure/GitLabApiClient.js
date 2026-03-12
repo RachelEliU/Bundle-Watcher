@@ -1,18 +1,16 @@
 'use strict';
 
 /**
- * GitLab API integration.
- * Posts a comment to the current MR via the GitLab Notes API.
- * Reads credentials from config; logs warnings and soft-skips if not configured.
+ * GitLab API client — posts comments to MRs via the GitLab Notes API.
+ * Skips gracefully when required env vars are not set.
+ * Does NOT throw on HTTP errors (logs and resolves) to avoid failing the pipeline.
  */
 
 const https = require('https');
-const config = require('./config');
+const config = require('../config');
 
 /**
  * Post a Markdown comment to the current GitLab MR.
- * Skips gracefully if required env vars are not set.
- * Does NOT throw on HTTP errors (logs and resolves) to avoid failing the pipeline.
  *
  * @param {string} markdown - The comment body
  * @returns {Promise<void>}
@@ -26,8 +24,8 @@ async function postMRComment(markdown) {
     return;
   }
 
-  const url = `${apiUrl}/projects/${encodeURIComponent(projectId)}/merge_requests/${mrIid}/notes`;
-  const body = JSON.stringify({ body: markdown });
+  const url    = `${apiUrl}/projects/${encodeURIComponent(projectId)}/merge_requests/${mrIid}/notes`;
+  const body   = JSON.stringify({ body: markdown });
   const urlObj = new URL(url);
 
   const options = {
@@ -52,7 +50,7 @@ async function postMRComment(markdown) {
         } else {
           console.error(`  ✗ Failed to post MR comment: HTTP ${res.statusCode}`);
           console.error('   ', data);
-          resolve(); // Don't fail the pipeline just for a comment failure
+          resolve(); // Don't fail the pipeline for a comment failure
         }
       });
     });

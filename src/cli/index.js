@@ -1,12 +1,11 @@
 'use strict';
 
 /**
- * CLI entry point — parses arguments and dispatches to the right command.
+ * CLI entry point — parses arguments and delegates to the pipeline.
  * No business logic lives here.
  */
 
-const { cmdScan }    = require('./commands/scan');
-const { cmdCompare } = require('./commands/compare');
+const pipeline = require('../pipeline');
 
 const args = process.argv.slice(2);
 
@@ -31,9 +30,9 @@ Environment Variables:
 }
 
 if (args.includes('--scan')) {
-  cmdScan();
+  pipeline.scan();
 } else if (args.includes('--compare')) {
-  cmdCompare().catch((err) => {
+  pipeline.compare().catch((err) => {
     console.error('Fatal error:', err);
     process.exit(1);
   });
