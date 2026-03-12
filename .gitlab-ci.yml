@@ -1,0 +1,224 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CSS Bundle Size Tracker — GitLab CI/CD
+# GitLab 16.3+  |  Runs on every Merge Request
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Shared defaults ───────────────────────────────────────────────────────────
+default:
+  image: node:20-alpine
+  interruptible: true
+
+# ── Workflow: only run pipelines for MRs and the default branch ───────────────
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ── Global variables ──────────────────────────────────────────────────────────
+variables:
+  # Directories that, when changed, should trigger the CSS size job
+  CSS_WATCH_PATHS: "packages/*/src/**/*.css packages/*/src/**/*.scss packages/*/package.json"
+
+  # Where built CSS bundles land after `npm run build`
+  BUILD_DIR: "packages"
+
+  # Report artifact filenames (keep in sync with measure-css.js defaults)
+  BASE_SIZES_FILE: css-sizes-base.json
+  CURRENT_SIZES_FILE: css-sizes-current.json
+  METRICS_REPORT: gl-metrics-report.json
+  MARKDOWN_REPORT: css-size-report.md
+
+  # Re-use node_modules across jobs in this pipeline
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+# ── Reusable cache template ───────────────────────────────────────────────────
+.node_cache: &node_cache
+  cache:
+    key:
+      files:
+        - package-lock.json
+        - "**/package-lock.json"
+    paths:
+      - .npm/
+      - node_modules/
+      - packages/*/node_modules/
+    policy: pull  # jobs only read; the install job writes
+
+# ── Stage order ───────────────────────────────────────────────────────────────
+stages:
+  - install
+  - build
+  - measure
+  - report
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 — Install dependencies (writes cache once)
+# ─────────────────────────────────────────────────────────────────────────────
+install:deps:
+  stage: install
+  <<: *node_cache
+  cache:
+    key:
+      files:
+        - package-lock.json
+        - "**/package-lock.json"
+    paths:
+      - .npm/
+      - node_modules/
+      - packages/*/node_modules/
+    policy: pull-push  # this job writes the cache
+  script:
+    - npm ci --prefer-offline
+  rules:
+    # Only run this job on MRs; always reinstall to keep deps correct
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2a — Build the TARGET (base) branch
+# ─────────────────────────────────────────────────────────────────────────────
+build:base:
+  stage: build
+  <<: *node_cache
+  needs: ["install:deps"]
+  script:
+    # Fetch and check out the target branch without altering the working tree
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git stash  # stash any working tree differences
+    - git checkout origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME -- .
+
+    # Install deps for the base state (in case package.json changed)
+    - npm ci --prefer-offline --silent
+
+    # Build CSS bundles for every package
+    - npm run build --workspaces --if-present
+
+    # Measure and save base sizes
+    - node scripts/measure-css.js --scan
+    - mv css-sizes.json $BASE_SIZES_FILE
+
+    # Restore feature-branch state
+    - git checkout HEAD -- .
+    - git stash pop || true
+  artifacts:
+    name: "css-base-sizes"
+    paths:
+      - $BASE_SIZES_FILE
+    expire_in: 1 day
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "packages/**/*.css"
+        - "packages/**/*.scss"
+        - "packages/**/package.json"
+        - "package.json"
+        - "package-lock.json"
+        - "scripts/measure-css.js"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2b — Build the SOURCE (feature) branch
+# ─────────────────────────────────────────────────────────────────────────────
+build:current:
+  stage: build
+  <<: *node_cache
+  needs: ["install:deps"]
+  script:
+    - npm run build --workspaces --if-present
+    - node scripts/measure-css.js --scan
+    - mv css-sizes.json $CURRENT_SIZES_FILE
+  artifacts:
+    name: "css-current-sizes"
+    paths:
+      - $CURRENT_SIZES_FILE
+    expire_in: 1 day
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "packages/**/*.css"
+        - "packages/**/*.scss"
+        - "packages/**/package.json"
+        - "package.json"
+        - "package-lock.json"
+        - "scripts/measure-css.js"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 3 — Measure: diff base vs current, generate reports
+# ─────────────────────────────────────────────────────────────────────────────
+measure:css-diff:
+  stage: measure
+  <<: *node_cache
+  needs:
+    - job: build:base
+      artifacts: true
+    - job: build:current
+      artifacts: true
+  script:
+    - node scripts/measure-css.js --compare
+  artifacts:
+    # GitLab Metrics Report — surfaces the diff in the MR widget
+    reports:
+      metrics: $METRICS_REPORT
+    # Keep the human-readable reports as downloadable artifacts
+    name: "css-size-reports"
+    paths:
+      - $METRICS_REPORT
+      - $MARKDOWN_REPORT
+    expose_as: "CSS Size Reports"
+    expire_in: 30 days
+    # Even if the job fails (threshold exceeded), keep the artifacts
+    when: always
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "packages/**/*.css"
+        - "packages/**/*.scss"
+        - "packages/**/package.json"
+        - "package.json"
+        - "package-lock.json"
+        - "scripts/measure-css.js"
+  # Threshold failures are warnings here; flip to "on_failure" to hard-block MRs
+  allow_failure:
+    exit_codes:
+      - 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 4 — Report: post Markdown table as an MR comment
+# ─────────────────────────────────────────────────────────────────────────────
+report:mr-comment:
+  stage: report
+  <<: *node_cache
+  needs:
+    - job: measure:css-diff
+      artifacts: true
+  script:
+    # The compare step already posted the comment if run inside CI.
+    # This job posts it explicitly using the saved markdown artifact,
+    # useful when the comment needs to be re-posted independently.
+    - |
+      if [ ! -f "$MARKDOWN_REPORT" ]; then
+        echo "No markdown report found, skipping comment."
+        exit 0
+      fi
+
+      # Post comment via GitLab API (requires GITLAB_TOKEN variable)
+      COMMENT=$(cat $MARKDOWN_REPORT)
+      curl --fail --silent --show-error \
+        --request POST \
+        --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+        --header "Content-Type: application/json" \
+        --data "{\"body\": $(echo "$COMMENT" | jq -Rs .)}" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes" \
+        | jq '.id' \
+        && echo "✅ MR comment posted." \
+        || echo "⚠ Failed to post comment (non-fatal)."
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "packages/**/*.css"
+        - "packages/**/*.scss"
+        - "packages/**/package.json"
+        - "package.json"
+        - "package-lock.json"
+        - "scripts/measure-css.js"
+      when: always
+  allow_failure: true
